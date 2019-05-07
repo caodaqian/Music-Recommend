@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='music.css') }}">
+    <title>音乐详情</title>
+</head>
+<body>
+    <h1> MUSIC </h1>
+    <div id="info">
+        <fieldset id="lyric">
+            <legend>~歌词~</legend>
+            暂无歌词~请等待管理员上传
+        </fieldset>
+    </div>
+    <ul>
+        <li><input class="action" type="radio" name="like" id="inp-like" value="0"><i class="ico" id="like">喜欢</i></li>
+        <li><input class="action" type="radio" name="unlike" id="inp-unlike" value="0"><i class="ico" id="unlike">不感兴趣</i></li>
+        <li><input class="action" type="radio" name="audition" id="inp-audition" value="0"><i class="ico" id="audition"><a href="http://music.163.com" id="a-audition">试听</a></i></li>
+        <li><input class="action" type="radio" name="download" id="inp-download" value="0"><i class="ico" id="download"><a href="/music/download/" id="a-download">下载</a></i></li>
+    </ul>
+</body>
+    <script type="text/javascript" src="{{ url_for('static', filename='basetool.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='music.js') }}"></script>
+</html>

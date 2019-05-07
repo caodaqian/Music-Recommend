@@ -1,0 +1,25 @@
+* {
+    padding: 0px;
+    margin: 0px;
+}
+
+@font-face {
+    font-family: 'icomoon';
+    src: url('/Static/fonts/icomoon.eot?f3qd3p');
+    src: url('/Static/fonts/icomoon.eot?f3qd3p#iefix') format('embedded-opentype'),
+        url('/Static/fonts/icomoon.ttf?f3qd3p') format('truetype'),
+        url('/Static/fonts/icomoon.woff?f3qd3p') format('woff'),
+        url('/Static/fonts/icomoon.svg?f3qd3p#icomoon') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+fieldset.likes {
+    width: 300px;
+    margin: 0 10px;
+    padding: 10px;
+}
+
+fieldset.likes li {
+    list-style: none;
+}

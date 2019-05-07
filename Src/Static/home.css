@@ -1,0 +1,39 @@
+#super {
+    display: none;
+}
+
+#userID {
+    border: 1px dashed red;
+    margin: 10px;
+    border-radius: 10px;
+    width: 30px;
+    height: 30px;
+    text-align: center;
+    color: darkgreen;
+}
+
+#userName {
+    border: 1px dashed red;
+    border-radius: 10px;
+    margin: 10px;
+    width: 80px;
+    height: 30px;
+    text-align: center;
+    color: red;
+}
+
+fieldset hr {
+    margin:0 auto;
+    border: 0;
+    height: 2px;
+    background: #333;
+    background-image: linear-gradient(to right, red, #333, rgb(9, 206, 91));
+}
+
+#search {
+    width: 80px;
+    height: 40px;
+    background: rgba(158, 206, 1, 0.8);
+    text-align: center;
+    font: normal 16px/20px "方正喵呜体","Microsoft Yahei UI";
+}

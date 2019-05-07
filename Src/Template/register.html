@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
+    <title>注册</title>
+</head>
+<body>
+    <h1> REGISTER </h1>
+    <form action="{{ url_for('MRB.register') }}" method="post">
+        <span>用户名:&nbsp;</span><input type="text" placeholder="请输入用户名" name="username" required>
+        <br>
+        <span>密码:&nbsp;</span>
+        <input type="password" name="userpwd" required>
+        <br>
+        <span>邮箱:&nbsp;</span>
+        <input type="email" name="useremail" required>
+        <br>
+        <fieldset class="likes">
+            <legend>兴趣所在：</legend>
+            <ul id="likes">
+            </ul>
+        </fieldset>
+        <div>
+            <span>管理员密钥:&nbsp;</span>
+            <input type="password" name="userSUPER">
+        </div>
+        <input type="submit" value="提交">
+        <input type="reset" value="重置">
+    </form>
+</body>
+<script type="text/javascript" src="{{ url_for('static', filename='basetool.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='register.js') }}"></script>
+</html>
