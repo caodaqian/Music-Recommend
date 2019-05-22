@@ -1,0 +1,13 @@
+div.jumbotron {
+    padding: 10% 5%;
+    background-color: peachpuff;
+    margin-top: 0;
+}
+
+.navbar {
+    margin-bottom: 0;
+}
+
+#start {
+    height: 100px;
+}

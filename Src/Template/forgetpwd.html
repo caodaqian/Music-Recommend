@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <title>找回密码</title>
+</head>
+<body>
+    <nav class="navbar navbar-default">
+        <div class="navbar-header">
+            <a class="navbar-brand navbar-btn btn-lg" href="{{ url_for('MRB.index') }}">
+                <strong>音乐推荐系统</strong>
+            </a>
+        </div>
+        <div class="collapse navbar-collapse btn-lg">
+            <ul id="register-nav" class="nav nav-tabs nav-justified">
+                <li><a href="{{ url_for('MRB.login') }}">登陆</a></li>
+                <li><a href="{{ url_for('MRB.register') }}">注册</a></li>
+                <li class="active"><a href="{{ url_for('MRB.forgetpwd') }}">找回密码</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <form action="{{ url_for('MRB.forgetpwd') }}" method="post">
+            <div class="form-group form-group-lg">
+                <label for="inputUserNane">用户名：&nbsp;</label>
+                <input type="text" name="username" id="inputUserNane" class="form-control" placeholder="User Name">
+            </div>
+            <div class="form-group form-group-lg">
+                <label for="inputUserEmail">用户邮箱：&nbsp;</label>
+                <input type="email" name="useremail" id="inputUserEmail" class="form-control"
+                    placeholder="User Email">
+            </div>
+            <div class="form-group form-group-lg">
+                <label for="inputUserPwd">新密码：&nbsp;</label>
+                <input type="password" name="userpwd" id="inputUserPwd" class="form-control" placeholder="New Password">
+            </div>
+            <div class="btn-group btn-group-justified">
+                <div class="btn-group btn-group-lg">
+                    <input class="btn btn-info" type="submit" value="提交">
+                </div>
+                <div class="btn-group btn-group-lg">
+                    <input class="btn btn-danger" type="reset" value="重置">
+                </div>
+            </div>
+        </form>
+    </div>
+</body>
+<script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.4.1.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+</html>

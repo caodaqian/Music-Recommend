@@ -1,0 +1,2 @@
+# [MASTER]
+# init-hook='import sys,os,re; _re=re.search(r".+\/" + base_dir, os.getcwd()); project_dir = _re.group() if _re else os.path.join(os.getcwd(), base_dir); sys.path.append(project_dir)'

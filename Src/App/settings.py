@@ -13,19 +13,16 @@ DB_SETTING = {
 LOG_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + "\\Log\\"
 
 # 打分文件保存的目录
-RATE_PATH = os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__)))) + "\\Data\\rate.txt"
+RATE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + "\\Data\\rate.csv"
 
 # chromedriver的应用程序目录
 CHROMEDRIVER_PATH = r'C:\Program Files (x86)\Google\Chrome\Application\chromedriver.exe'
 
 # 音乐存放路径
-MUSIC_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
-    __file__)))) + "\\Data\\music\\{}.mp3"
+MUSIC_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + "\\Data\\music\\{}.mp3"
 
-# Scrapy爬虫数据
-SCRAPY_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
-    __file__)))) + "\\Data\\"
+# Scrapy爬虫数据基目录
+SCRAPY_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + "\\Data\\"
 
 # spuer用户上传文件的格式
 FILEEXT = set(['json', 'txt'])
@@ -48,3 +45,26 @@ SCORE = {
     'audition': 1,
     'download': 3
 }
+
+# 推荐算法dump文件路径
+RECOMMEND_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + "\\Data\\recommend.pkl"
+
+# 推荐算法配置
+ALGO_OPT = {
+    "similarity": "pearson",
+    "user_based": False
+}
+
+# 推荐读取器配置
+READER_OPT = {
+    "line_format": "user item rating timestamp",
+    "sep": ',',
+    "rating_scale": (-10, 14),
+    "skip_lines": 0
+}
+
+# 推荐数量
+RECOMMEND_NUM = 50
+
+# 分页显示数量，14是排版最好的
+PAGE_OFFSET = 13

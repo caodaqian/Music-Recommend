@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/allmusic.css') }}">
+    <title>全部音乐</title>
+</head>
+
+<body>
+    <nav class="navbar navbar-inverse">
+        <div class="navbar-header">
+            <a class="navbar-brand navbar-btn btn-lg" href="{{ url_for('MRB.index') }}">
+                <strong>音乐推荐系统</strong>
+            </a>
+        </div>
+        <a class="navbar-btn  navbar-right btn-link btn-lg" href="{{ url_for('MRB.logout') }}">
+            <strong>退出登陆</strong>
+        </a>
+        <div class="collapse navbar-collapse btn-lg">
+            <ul id="register-nav" class="nav nav-tabs nav-justified">
+                <li><a href="{{ url_for('MRB.home') }}">用户首页</a></li>
+                <li><a href="{{ url_for('MRB.search') }}">搜索歌曲</a></li>
+                <li class="active"><a href="{{ url_for('MRB.allmusic') }}">全部歌曲</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="row">
+        <div class="col-sm-3 col-lg-3 left">
+            <strong id="welcome">Welcome</strong>
+            <hr>
+
+            <fieldset id="super">
+                <legend>管理员特权</legend>
+                <form action="{{ url_for('MRB.home') }}" method="post" enctype="multipart/form-data">
+                    <div class="container-fluid">
+                        <div class="form-group form-group-lg">
+                            <label for="inputUploadList">上传歌单json文件</label>
+                            <input id="inputUploadList" class="form-control" type="file" name="uploadlist">
+                        </div>
+                        <div class="form-group form-group-lg">
+                            <label for="inputUploadSong">上传歌曲json文件</label>
+                            <input class="form-control" type="file" name="uploadmusic" id="inputUploadSong">
+                        </div>
+                    </div>
+                    <div class="btn-group btn-lg btn-group-justified">
+                        <div class="btn-group btn-group-lg">
+                            <input class="btn btn-info" type="submit" value="提交">
+                        </div>
+                        <div class="btn-group btn-group-lg">
+                            <input class="btn btn-danger" type="reset" value="重置">
+                        </div>
+                    </div>
+                </form>
+                <hr>
+            </fieldset>
+
+            <div class="container btn-group btn-group-lg btn-block">
+                <a class="btn btn-success btn-block" href="{{ url_for('MRB.search') }}">搜索歌曲</a>
+            </div>
+            <hr>
+            <div class="container btn-group btn-group-lg btn-block">
+                <a class="btn btn-info btn-block" href="{{ url_for('MRB.allmusic') }}">全部歌曲</a>
+            </div>
+        </div>
+
+        <div class="col-sm-9 col-lg-9 right">
+            <table class="table table-hover table-striped">
+                <thead class="">
+                    <tr class="info">
+                        <td>歌曲名称</td>
+                        <td>歌手名称</td>
+                    </tr>
+                </thead>
+                <tbody id="sdata"></tbody>
+            </table>
+            <span id='help' class=" help-block text-center">请稍等片刻，正在努力加载中……</span>
+
+            <div class="container text-center">
+            <div class="btn-group btn-group-lg">
+                <button id='previous' class="btn btn-default disabled" data-page="0">
+                    &laquo;
+                </button>
+                <button id='current' class="btn btn-default disabled" data-page="1">
+                    1
+                </button>
+                <button id='second' class="btn btn-default" data-page="2">
+                    2
+                </button>
+                <button id='next' class="btn btn-default" data-page="4">
+                    &raquo;
+                </button>
+            </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+<script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.4.1.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/basetool.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/allmusic.js') }}"></script>
+</html>

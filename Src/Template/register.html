@@ -5,33 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
-    <title>注册</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
+    <title>用户注册</title>
 </head>
 <body>
-    <h1> REGISTER </h1>
-    <form action="{{ url_for('MRB.register') }}" method="post">
-        <span>用户名:&nbsp;</span><input type="text" placeholder="请输入用户名" name="username" required>
-        <br>
-        <span>密码:&nbsp;</span>
-        <input type="password" name="userpwd" required>
-        <br>
-        <span>邮箱:&nbsp;</span>
-        <input type="email" name="useremail" required>
-        <br>
-        <fieldset class="likes">
-            <legend>兴趣所在：</legend>
-            <ul id="likes">
-            </ul>
-        </fieldset>
-        <div>
-            <span>管理员密钥:&nbsp;</span>
-            <input type="password" name="userSUPER">
+    <nav class="navbar navbar-default">
+        <div class="navbar-header">
+            <a class="navbar-brand navbar-btn btn-lg" href="{{ url_for('MRB.index') }}">
+                <strong>音乐推荐系统</strong>
+            </a>
         </div>
-        <input type="submit" value="提交">
-        <input type="reset" value="重置">
-    </form>
+        <div class="collapse navbar-collapse btn-lg">
+            <ul id="register-nav" class="nav nav-tabs nav-justified">
+                <li><a href="{{ url_for('MRB.login') }}">登陆</a></li>
+                <li class="active"><a href="{{ url_for('MRB.register') }}">注册</a></li>
+                <li><a href="{{ url_for('MRB.forgetpwd') }}">找回密码</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <form action="{{ url_for('MRB.register') }}" method="post">
+            <div class="form-group form-group-lg">
+                <label for="username">用户名：&nbsp;</label>
+                    <input id="inputUserName" class="form-control" type="text" placeholder="User Name" name="username" required>
+            </div>
+            <div class="form-group form-group-lg">
+                <label for="inputUserPwd">密码：&nbsp;</label>
+                <input id="inputUserPwd" class="form-control" type="password" name="userpwd" required placeholder="User Password">
+            </div>
+            <div class="form-group form-group-lg">
+                <label for="inputUserEmail">邮箱：&nbsp;</label>
+                <input id="inputUserEmail" type="email" class="form-control" name="useremail" placeholder="User Email" required>
+            </div>
+            <div class="form-group form-group-sm">
+                <label>寻找您的兴趣所在：</label>
+                <ul id="likes" class="list-unstyled">
+                </ul>
+            </div>
+            <div class="form-group form-group-lg has-error">
+                <label>管理员密钥：&nbsp;</label>
+                <input class="form-control" type="password" name="userSUPER" placeholder="Super Power">
+            </div>
+            <div class="btn-group btn-group-justified">
+                <div class="btn-group btn-group-lg">
+                    <input class="btn btn-info" type="submit" value="提交">
+                </div>
+                <div class="btn-group btn-group-lg">
+                    <input class="btn btn-danger" type="reset" value="重置">
+                </div>
+            </div>
+        </form>
+    </div>
 </body>
-<script type="text/javascript" src="{{ url_for('static', filename='basetool.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='register.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.4.1.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/basetool.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/register.js') }}"></script>
 </html>

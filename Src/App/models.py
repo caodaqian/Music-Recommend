@@ -1,6 +1,9 @@
 # 用户管理模块
-from Src.App.ext import StdError, ConnectMysql
-from Src.App.settings import SCRAPY_PATH, MUSIC_PATH, RATE_PATH, CHROMEDRIVER_PATH, SCORE
+from Src.App.ext import StdError, ConnectMysql, Pages
+from Src.App.settings import SCRAPY_PATH, MUSIC_PATH, RATE_PATH, CHROMEDRIVER_PATH, SCORE, RECOMMEND_PATH, ALGO_OPT, READER_OPT, RECOMMEND_NUM
+from collections import defaultdict
+from surprise import KNNBasic, Reader, Dataset
+from surprise import dump
 import re
 import requests
 import time
@@ -9,13 +12,6 @@ import os
 import json
 import hashlib
 import sys
-
-
-# 用户管理模块所用到的错误类
-class UserManagerError(Exception):
-    def __init__(self, message):
-        super().__init__()
-        self.message = message
 
 
 # 用户管理模块
@@ -27,113 +23,33 @@ class UserManager(object):
     def __del__(self):
         self.conn.close()
 
-    @staticmethod
-    def is_super(userID):
-        ret = 0
-        conn = ConnectMysql.new_connect()
-        cursor = conn.cursor()
-        try:
-            sql = 'select user_SUPER from t_users where user_id={}'.format(userID)
-            if cursor.execute(sql) == 1:
-                ret = cursor.fetchall()[0][0]
-            else:
-                raise UserManagerError('未使用正确的userID')
-        except UserManagerError as e:
-            StdError.error(e.message + "\tuser_id=" + str(userID))
-            ret = 0
-        except:
-            ret = 0
-        finally:
-            cursor.close()
-            conn.close()
-            return ret
-
-    @staticmethod
-    def get_likes():
-        conn = ConnectMysql.new_connect()
-        cursor = conn.cursor()
-        cursor.execute('select list_tags from t_lists;')
-        likes = set()
-        datas = cursor.fetchall()
-        for data in datas:
-            likes.update((json.loads(data[0].replace("'", '"'))))
-        cursor.close()
-        conn.close
-        return json.dumps(list(likes), ensure_ascii=False)
+    def is_super(self, uid: int):
+        ret = ConnectMysql.is_user_super(self.conn, uid)
+        return ret
 
     def register(self, userName, userPwd, userSUPER, userEmail, userLikes=[]):
-        ret = 0
         # 创建用户信息
         userPwd = userPwd.encode('utf-8')
         userPwd = hashlib.md5(userPwd).hexdigest()
         # 验证管理员密钥
         if userSUPER == self.superpwd:
-            userSUPER = '1'
+            userSUPER = 1
         else:
-            userSUPER = '0'
-        cursor = self.conn.cursor()
-        try:
-            if cursor.execute('select user_id from t_users where user_name=\'{}\';'.format(userName)) != 0:
-                raise UserManagerError('已存在相同的用户名')
-            sql = 'insert into t_users (user_name, user_SUPER, user_like, user_pwd, user_email) values (\'{}\', {}, \'{}\', \'{}\', \'{}\');'.format(
-                userName, userSUPER, ','.join(userLikes), userPwd, userEmail)
-            StdError.info("注册用户" + sql)
-            cursor.execute(sql)
-            self.conn.commit()
-        except UserManagerError as e:
-            self.conn.rollback()
-            StdError.error(e.message + "\tuser_name=" + userName +
-                            "\tuser_SUPER=" + str(userSUPER) + "\tuser_pwd=" + str(userPwd))
-            ret = -1
-        except:
-            self.conn.rollback()
-            ret = -1
-        finally:
-            print(ret)
-            cursor.close()
-            return ret
+            userSUPER = 0
+        return ConnectMysql.user_register(self.conn, userName, userPwd, userSUPER, userEmail, userLikes)
 
     def login(self, userName, userPwd):
-        cursor = self.conn.cursor()
         userPwd = hashlib.md5(userPwd.encode()).hexdigest()
-        try:
-            if cursor.execute('select user_id,user_pwd from t_users where user_name=\'{}\' limit 1;'.format(userName)) != 0:
-                data = cursor.fetchall()
-                if data[0][1] == userPwd:
-                    cookie = {'user_id': data[0][0], 'user_name': userName}
-                    return cookie
-                else:
-                    raise UserManagerError('user_name={}, userPwd={}, wrong password!'.format(userName, userPwd))
-            else:
-                raise UserManagerError('have no this user name!')
-        except UserManagerError as e:
-            StdError.error(e.message + "\tuser_name=" + userName)
-            return None
-        finally:
-            cursor.close()
+        ret = ConnectMysql.user_login(self.conn, userName, userPwd)
+        if ret != -1:
+            cookie = {'user_id': ret, 'user_name': userName}
+        else:
+            cookie = None
+        return cookie
 
-    def get_back(self, userName, userEmail, userNewPwd):
-        ret = 0
-        cursor = self.conn.cursor()
+    def forget_passwd(self, userName, userEmail, userNewPwd):
         userNewPwd = hashlib.md5(userNewPwd.encode()).hexdigest()
-        try:
-            if cursor.execute('select user_id from t_users where user_name=\'{}\' and user_email=\'{}\';'.format(userName, userEmail)) == 0:
-                raise UserManagerError('修改密码却没有正确的用户名或用户邮箱')
-            userID = cursor.fetchall()[0][0]
-            sql = 'update t_users set user_pwd=\'{}\' where user_id={};'.format(
-                userNewPwd, userID)
-            cursor.execute(sql)
-            self.conn.commit()
-        except UserManagerError as e:
-            self.conn.rollback()
-            StdError.error(e.message + "\tuser_name=" + userName + "\tuser_pwd=" + userNewPwd)
-            ret = -1
-        except:
-            self.conn.rollback()
-            ret = -1
-        finally:
-            cursor.close()
-            return ret
+        return ConnectMysql.user_forget_passwd(self.conn, userName, userEmail, userNewPwd)
 
 
 # 音乐上传模块
@@ -161,7 +77,6 @@ class UploadMusic(object):
         return data
 
     def upload_list(self, data):
-        sql = 'insert into t_lists ({}) values ({}) ON DUPLICATE KEY UPDATE list_id={}'
         keys, vals = '', ''
         for kv in data.items():
             key = str(kv[0])
@@ -172,26 +87,16 @@ class UploadMusic(object):
                 vals += '\'' + str(kv[1]).replace('\'', r'\'') + '\','
         keys = keys[:-1]
         vals = vals[:-1]
-        sql = sql.format(keys, vals, data['list_id'])
-        sql = sql.replace("\n", r'\n') + ';'
-        sql = sql.replace("\t", r'\t')
-        cursor = self.conn.cursor()
-        cursor.execute(sql)
-        self.conn.commit()
-        cursor.close()
+        vals = vals.replace("\n", r'\n')
+        vals = vals.replace("\t", r'\t')
+        return ConnectMysql.upload_list(self.conn, keys, vals, data['list_id'])
 
-    def upload_song(self, data):
+    def upload_music(self, data):
         # 将歌单的标签加入到歌曲的属性当中
-        sql = 'select list_tags,list_songs from t_lists where list_songs like \'%{}%\';'.format(
-            data['song_id'])
-        cursor = self.conn.cursor()
-        if cursor.execute(sql) != 0:
-            song_tags = ''
-            ret = cursor.fetchall()
-            for i in ret:
-                song_tags += ','.join(json.loads(i[0].replace('\'', '"')))
-            data['song_tags'] = song_tags
-        sql = 'insert into t_songs({}) values({}) ON DUPLICATE KEY UPDATE song_id={}'
+        songTags = ConnectMysql.get_tags_from_list(self.conn, data['song_id'])
+        if songTags != '':
+            data['song_tags'] = songTags
+        # 导入进数据库
         keys, vals = '', ''
         for kv in data.items():
             key = str(kv[0])
@@ -202,47 +107,41 @@ class UploadMusic(object):
                 vals += '\'' + str(kv[1]).replace('\'', r'\'') + '\','
         keys = keys[:-1]
         vals = vals[:-1]
-        sql = sql.format(keys, vals, data['song_id'])
-        sql = sql.replace("\n", r'\n') + ';'
-        sql = sql.replace("\t", r'\t')
-        cursor.execute(sql)
-        self.conn.commit()
-        cursor.close()
+        vals = vals.replace("\n", r'\n')
+        vals = vals.replace("\t", r'\t')
+        return ConnectMysql.upload_song(self.conn, keys, vals, data['song_id'])
 
     def __upload_file(self, filepath):
-        fp = open(filepath, 'r', encoding='utf-8')
-        while True:
-            line = fp.readline()[:-2]
-            if line == '':
-                break
-            try:
+        try:
+            fp = open(filepath, 'r', encoding='utf-8')
+            while True:
+                line = fp.readline()[:-2]
+                if line == '':
+                    break
                 data = json.loads(line, encoding='utf-8')
                 # 对scrapy爬出来文件有些错误进行处理
                 data = UploadMusic.handle_json(data)
                 # 对list和song进行单独的处理
                 if 'list_id' in data.keys():
-                    self.upload_list(data)
-                    StdError.info('list_id=%s已导入' % data['list_id'])
+                    if self.upload_list(data):
+                        StdError.info('list_id=%s已导入' % data['list_id'])
                 elif 'song_id' in data.keys():
-                    self.upload_song(data)
-                    StdError.info('song_id=%s已导入' % data['song_id'])
+                    if self.upload_song(data):
+                        StdError.info('song_id=%s已导入' % data['song_id'])
                 else:
-                    StdError.warn("data缺乏必要的id")
-            except FileNotFoundError:
-                self.conn.rollback()
-                StdError.error('文件不存在，请调用scrapy爬虫创建数据文件')
-            except UnicodeDecodeError:
-                self.conn.rollback()
-                StdError.error('文件格式不能正常解析，请调用scrapy爬虫创建数据文件')
-            except json.decoder.JSONDecodeError:
-                self.conn.rollback()
-                StdError.error('json文件不能解析，需要创建符合格式的json文件（参照Data文件夹下的json）')
-            except pymysql.err.IntegrityError:
-                self.conn.rollback()
-                StdError.error('数据库中已存在这个歌曲')
-            except Exception:
-                self.conn.rollback()
-                StdError.error('未知错误！请联系开发人员\terror line:' + line)
+                    StdError.warn("上传模块出错\tjson文件中缺乏必要的id，line=" + line)
+        except FileNotFoundError:
+            self.conn.rollback()
+            StdError.error('上传模块出错\t文件不存在，请调用scrapy爬虫创建数据文件')
+        except UnicodeDecodeError:
+            self.conn.rollback()
+            StdError.error('上传模块出错\t文件格式不能正常解析，请调用scrapy爬虫创建数据文件')
+        except json.decoder.JSONDecodeError:
+            self.conn.rollback()
+            StdError.error('上传模块出错\tjson文件不能解析，需要创建符合格式的json文件（参照Data文件夹下的json）')
+        except Exception:
+            self.conn.rollback()
+            StdError.error('上传模块出出现未知错误\tline=' + line)
 
     def import_scrapy_data(self):
         file1, file2 = SCRAPY_PATH + "lists.json", SCRAPY_PATH + "songs.json"
@@ -261,8 +160,7 @@ class Rate():
     @staticmethod
     def dump2file(uid, sid, score):
         with open(RATE_PATH, 'a') as f:
-            # f.write(str(uid) + "\t" + str(sid) + "\t" + str() + "\t" + str( + ))
-            f.write("{}\t{}\t{}\t{}\n".format(uid, sid, score, time.time()))
+            f.write("{},{},{},{}\n".format(uid, sid, score, time.time()))
             f.flush()
 
     def __score_action(self, like, unlike, audition, download):
@@ -275,40 +173,26 @@ class Rate():
 
     def __score_similar(self, uid, sid):
         # 标签类似
-        cursor = self.conn.cursor()
-        sql = 'select user_like from t_users where user_id={} limit 1;'.format(uid)
-        cursor.execute(sql)
-        userLike = cursor.fetchall()[0][0]
-        sql = 'select song_tags from t_songs where song_id={} limit 1;'.format(sid)
-        cursor.execute(sql)
-        songTags = cursor.fetchall()[0][0]
-        cursor.close()
+        userLike = ConnectMysql.get_user_tags(self.conn, uid)
+        songTags = ConnectMysql.get_song_tags(self.conn, sid)
         if userLike == None:
             return 0
         elif songTags == None:
             return 0
         else:
-            userLike = userLike.split(',')
             uLikeSet = set()
             for i in userLike:
                 uLikeSet.add(i)
-            songTags = songTags.split(',')
             sLikeSet = set()
             for i in songTags:
                 sLikeSet.add(i)
-            print(sLikeSet.issubset(uLikeSet))
-            print(userLike, songTags)
-            print(sLikeSet, uLikeSet)
             if sLikeSet.issubset(uLikeSet):
                 return 2
             else:
                 return -2
 
     def __score_comment(self, sid):
-        cursor = self.conn.cursor()
-        sql = 'select song_comment from t_songs where song_id={};'.format(sid)
-        cursor.execute(sql)
-        comment = cursor.fetchall()[0][0]
+        comment = ConnectMysql.get_song_comment(self.conn, sid)
         return comment / SCORE['comment_base'] * SCORE['comments']
 
     def score(self, uid, sid, like, unlike, audition, download):
@@ -316,8 +200,21 @@ class Rate():
         sSimilar = self.__score_similar(uid, sid)
         sComment = self.__score_comment(sid)
         score = sAction + sSimilar + sComment
-        StdError.info("行为得分={}\t标签得分={}\t热度得分={}\t最终得分={}".format(sAction, sSimilar, sComment, score))
+        StdError.info("行为得分={},标签得分={},热度得分={},最终得分={}".format(sAction, sSimilar, sComment, score))
         self.dump2file(uid, sid, score)
+
+    def dump_from_db(self):
+        actions = ConnectMysql.get_actions(self.conn)
+        if actions != None and len(actions) > 0:
+            os.remove(RATE_PATH)
+            with open(RATE_PATH, 'w') as f:
+                for aid, uid, sid, like, unlike, audition, download in actions:
+                    sAction = self.__score_action(like, unlike, audition, download)
+                    sSimilar = self.__score_similar(uid, sid)
+                    sComment = self.__score_comment(sid)
+                    score = sAction + sSimilar + sComment
+                    f.write("{},{},{},{}\n".format(uid, sid, score, time.time()))
+                    f.flush()
 
 
 # 音乐检索模块
@@ -352,75 +249,148 @@ class MusicSearch(object):
         pass
 
     def get_music_by_text(self, text):
-        cursor = self.conn.cursor()
-        nameSQL = 'select song_name,song_artist,song_id from t_songs where song_name like \'%{}%\' or song_artist like \'%{}%\''.format(text, text)
-        res = cursor.execute(nameSQL)
-        if res == 0:
-            return json.dumps({'num': res})
+        ret = ConnectMysql.get_songs_by_search(self.conn, text)
+        return json.dumps(ret)
+
+
+# 音乐推荐模块
+class MusicRecommend():
+    def __init__(self):
+        self.current = 0
+        self.updateTimeStamp = [(self.current, time.time())]
+        self.top_n = defaultdict(list)
+        reader = Reader(line_format=READER_OPT["line_format"], sep=READER_OPT["sep"],
+                        rating_scale=READER_OPT["rating_scale"], skip_lines=READER_OPT["skip_lines"])
+        self.data = Dataset.load_from_file(RATE_PATH, reader=reader)
+        if os.path.isfile(RECOMMEND_PATH):
+            self.predictions, self.algo = dump.load(RECOMMEND_PATH)
         else:
-            data = cursor.fetchall()
-            return json.dumps({'num': res, 'data': data})
+            sim_opt = {
+                "name": ALGO_OPT["similarity"],
+                "user_based": ALGO_OPT["user_based"]
+            }
+            self.algo = KNNBasic(sim_options=sim_opt)
+            self.predictions = []
+
+    def __del__(self):
+        # dump.dump(RECOMMEND_PATH, predictions=self.predictions, algo=self.algo, verbose=0)
+        StdError.info('The dump has been saved as file {}'.format(RECOMMEND_PATH))
+
+    def calculate(self, n=100):
+        trainset = self.data.build_full_trainset()
+        self.algo.fit(trainset)
+        testset = trainset.build_anti_testset()
+        self.predictions = self.algo.test(testset)
+        self.current += 1
+        self.updateTimeStamp.append((self.current, time.time()))
+        self.top_n = defaultdict(list)
+        for uid, iid, t_rating, est, _ in self.predictions:
+            self.top_n[uid].append((iid, est))
+        for uid, user_ratings in self.top_n.items():
+            user_ratings.sort(key=lambda x: x[1], reverse=True)
+            self.top_n[uid] = user_ratings[:n]
+        return (self.predictions, self.top_n)
+
+    def get_top_n(self, uid, start=0, end=RECOMMEND_NUM):
+        tmplist = self.top_n[str(uid)][start:end]
+        return [iid for iid,_ in tmplist]
+
+    def show(self):
+        if self.current > 0:
+            StdError.info("recommend current version={}".format(self.current))
+            for uid, user_ratings in self.top_n.items():
+                StdError.info(str(uid) + ":" + str([iid for iid,_ in user_ratings]))
 
 
 # 音乐管理模块
 class MusicManager():
-    def __init__(self):
+    def __init__(self, mr=None):
         self.DownloadAPI = 'http://music.163.com/song/media/outer/url?id={}'
         self.conn = ConnectMysql.new_connect()
         self.SongURL = 'http://music.163.com'
+        self.recommend = mr
 
     def __del__(self):
         self.conn.close()
 
-    def get_recommend(self, offset=0, limit=35):
-        cursor = self.conn.cursor()
-        # TODO 这里直接从数据库拿的数据，要改成推荐的
-        sql = 'select song_name,song_artist,song_id from t_songs limit {},{};'.format(offset, limit)
-        cursor.execute(sql)
-        data = cursor.fetchall()
+    @staticmethod
+    def is_in_set(sid, idset:set):
+        if sid in idset:
+            return True
+        else:
+            idset.add(sid)
+            return False
+
+    def get_recommend(self, uid, offset=0, limit=50, topk=RECOMMEND_NUM):  #TODO 推荐算法
+        if (self.recommend == None):
+            StdError.error("MusicManager模块没有传入recommend对象")
+            return None
+        start = offset * limit
+        end = (offset + 1) * limit
+        if end > topk:
+            StdError.error("请求推荐超出限制！end={}，topk={}".format(limit, topk))
+            return None
+        # 获取真实推荐歌曲
+        sidlist = self.recommend.get_top_n(uid, start, end)
+        ret = []
+        songSet = set()
+        for i in sidlist:
+            data = ConnectMysql.get_song_by_id(self.conn, i)
+            if data != None:
+                songSet.add(data[0])
+                ret.append(data)
+        topk -= len(sidlist)
+        # 获取相似类型歌曲
+        if topk > 0:
+            tagsList = ConnectMysql.get_user_tags(self.conn, uid)
+            if tagsList != None:
+                songsList = ConnectMysql.get_songs_by_tags(self.conn, tagsList, topk)
+                for songInfo in songsList:
+                    songId = songInfo[0]
+                    if not self.is_in_set(songId, songSet):
+                        ret.append(songInfo)
+                topk -= len(songsList)
+        # 获取随即推荐歌曲
+        if topk > 0:
+            songsList = ConnectMysql.get_songs_by_random(self.conn, RECOMMEND_NUM * 2)
+            for songInfo in songsList:
+                songId = songInfo[0]
+                if not self.is_in_set(songId, songSet):
+                    ret.append(songInfo)
+        ret = json.dumps(list(ret), ensure_ascii=False)
+        return ret
+
+    def get_music_info(self, sid):
+        data = ConnectMysql.get_song_info(self.conn, sid)
         data = json.dumps(list(data), ensure_ascii=False)
         return data
 
-    def get_music_info(self, songid):
-        cursor = self.conn.cursor()
-        sql = 'select song_name,song_artist,song_album,song_lyric,song_albumPicture,song_tags,song_link from t_songs where song_id={} limit 1;'.format(songid)
-        cursor.execute(sql)
-        data = cursor.fetchall()
-        data = json.dumps(list(data), ensure_ascii=False)
+    def get_music_num(self):
+        data = ConnectMysql.get_music_number(self.conn)
+        data = json.dumps({'number': data})
         return data
 
-    # 暂时不会使用这个功能
-    # def audition(self, song_id):
-    #     from selenium import webdriver
-    #     from selenium.webdriver.chrome.options import Options
-    #     # chrome 无头版设置
-    #     options = Options()
-    #     options.add_argument('--no-sandbox')
-    #     options.add_argument('--ignore-certificate-errors')
-    #     driver = webdriver.Chrome(
-    #         executable_path=CHROMEDRIVER_PATH, chrome_options=options)
-    #     cursor = self.conn.cursor()
-    #     cursor.execute(
-    #         'select song_link from t_songs where song_id=' + str(song_id))
-    #     data = cursor.fetchall()
-    #     song_link = data[0][0]
-    #     driver.get(self.SongURL + song_link)
+    def get_all_music(self, query:int, offset:int):
+        start = (query - 1) * 16
+        ret = {}
+        data = ConnectMysql.get_all_music(self.conn, start, offset)
+        ret['data'] = data
+        page = Pages()
+        page = page.check_and_ret(query, offset)
+        ret['page'] = page
+        return json.dumps(ret, ensure_ascii=False)
 
-    def download(self, songid):
-        if songid == '':
-            StdError.error('没有正确的歌曲id')
-            return
+    def download(self, sid):
+        if sid == '':
+            StdError.error('歌曲下载出错\t没有正确的歌曲id')
+            return None
         # 加入MySQL里面的支持，查找到对应的name
-        cursor = self.conn.cursor()
-        cursor.execute('select song_name from t_songs where song_id={};'.format(songid))
-        data = cursor.fetchall()
-        songName = data[0][0]
-
+        songName = ConnectMysql.get_song_by_id(self.conn, sid)[1]
         if not os.path.isfile(MUSIC_PATH.format(songName)):
-            StdError.info("下载链接：" + self.DownloadAPI.format(songid))
+            StdError.info("下载链接：" + self.DownloadAPI.format(sid))
             headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.75 Safari/537.36'}
-            r = requests.get(self.DownloadAPI.format(songid), headers=headers,allow_redirects=False)
+            r = requests.get(self.DownloadAPI.format(sid), headers=headers,allow_redirects=False)
             src = r.headers['location']
             res = requests.get(src)
             with open(MUSIC_PATH.format(songName), 'wb') as f:
@@ -440,34 +410,16 @@ class ActionManager():
     def __del__(self):
         self.conn.close()
 
-    def get_action(self, userid, songid):
-        cursor = self.conn.cursor()
-        sql = 'select action_like,action_unlike,action_audition,action_download from t_actions where action_user={} and action_song={}'.format(userid, songid)
-        if 0 == cursor.execute(sql):
-            return json.dumps(((0, 0, 0, 0),))
+    def get_action(self, uid, sid):
+        data = ConnectMysql.get_actions(self.conn, uid, sid)
+        if data == None:
+            return json.dumps((0, 0, 0, 0))
         else:
-            data = cursor.fetchall()
             return json.dumps(data, ensure_ascii=False)
 
     def set_action(self, uid, sid, like, unlike, audition, download):
-        ret = True
-        cursor = self.conn.cursor()
-        sql = 'select action_id from t_actions where action_user={} and action_song={};'.format(uid, sid)
-        if cursor.execute(sql) == 0:
-            sql = 'insert into t_actions (action_user, action_song, action_like, action_unlike, action_audition, action_download) values ({}, {}, {}, {}, {}, {});'.format(uid, sid, like, unlike, audition, download)
-            StdError.info("用户行为新增：uid={},sid={}".format(uid, sid))
-        else:
-            sql = 'update t_actions set action_like={}, action_unlike={}, action_audition={}, action_download={} where action_user={} and action_song={};'.format(like, unlike, audition, download, uid, sid)
-            StdError.info("用户行为更新：uid={},sid={}".format(uid, sid))
-        try:
-            cursor.execute(sql)
-            self.conn.commit()
-        except:
-            self.conn.rollback()
-            StdError.error(sql)
-            ret = False
-        finally:
-            cursor.close()
+        ret = ConnectMysql.set_action(self.conn, uid, sid, like, unlike, audition, download)
+        if ret:
             rate = Rate()
             rate.score(uid, sid, like, unlike, audition, download)
-            return ret
+        return ret
